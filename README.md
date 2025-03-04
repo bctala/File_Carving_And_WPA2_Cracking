@@ -9,6 +9,18 @@
 
 ---
 
+## Virtual Machine Setup
+We will need **two VMs**:
+1. **Attack VM** – Running Kali Linux (or any penetration testing OS) for executing attacks.
+2. **Victim VM** – Running a standard OS (e.g., Windows or Linux) to simulate a target system.
+
+Both VMs should be connected using a **network adapter** configured as follows:
+- **For Wireless Attacks**: Use an external Wi-Fi adapter that supports monitor mode and packet injection.
+- **For Wired Attacks**: Use a **bridged network adapter** to allow communication between VMs and external devices.
+
+---
+
+
 ## Setting Up the Network Adapter
 
 ### For Wireless Interfaces (Monitor Mode)
